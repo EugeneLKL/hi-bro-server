@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "hi-bro-server",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -12,12 +12,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^4.15.0",
-    "express": "^4.18.2"
+    "@aws-sdk/client-s3": "^3.358.0",
+    "@aws-sdk/s3-request-presigner": "^3.358.0",
+    "@aws-sdk/smithy-client": "^3.320.0",
+    "@prisma/client": "^4.16.1",
+    "aws-sdk": "^2.1403.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22",
-    "prisma": "^4.16.0"
+    "prisma": "^4.16.1"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

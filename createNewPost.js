@@ -1,10 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
+const fs = require("fs");
 const prisma = new PrismaClient();
 
 async function createNewPost(req, res) {
   try {
-    const { title, content } = req.body;
-
+    const { title, content } = req.body.formData;
+    
     const newPost = await prisma.hikingPost.create({
       data: {
         title,
