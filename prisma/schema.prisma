@@ -11,24 +11,39 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(uuid())
+  userId      String       @id @default(uuid())
   username    String       @unique
   email       String       @unique
   password    String
+  profileIm  String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   hikingPosts HikingPost[]
+  comments    Comment[]
 }
 
 model HikingPost {
-  postId    String   @id @default(uuid())
-  user      User?    @relation(fields: [userId], references: [id])
-  userId    String?
-  title     String
-  content   String
-  imageUrl  String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  postId      String    @id @default(uuid())
+  user        User?     @relation(fields: [userId], references: [userId])
+  userId      String?
+  title       String
+  content     String
+  imageUrl    String[]
+  comments    Comment[]
+  voteCounter Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Comment {
+  commentId   String      @id @default(uuid())
+  user        User?       @relation(fields: [userId], references: [userId])
+  userId      String?
+  postId      String
+  comment     String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  hikingPost  HikingPost  @relation(fields: [postId], references: [postId])
 }
 
 model Test {

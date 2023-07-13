@@ -25,8 +25,7 @@ app.post("/upload", upload.array("images", 10), async (req, res) => {
     const uploadedKeys = await Promise.all(uploadPromises);
 
     const imageUrl = uploadedKeys.map(
-      (key) =>
-        `https://upload-s3-hibro-application.s3.amazonaws.com/${key}`
+      (key) => `https://upload-s3-hibro-application.s3.amazonaws.com/${key}`
     );
 
     // Return the image URLs in the response
@@ -41,7 +40,6 @@ app.post("/upload", upload.array("images", 10), async (req, res) => {
 app.post("/api/posts", async (req, res) => {
   try {
     const { title, content, imageUrl } = req.body;
-
     const newPost = await prisma.hikingPost.create({
       data: {
         title,
@@ -70,9 +68,172 @@ app.get("/api/posts", async (req, res) => {
   }
 });
 
+// GET /api/posts/:postId route handler
+app.get("/api/posts/:postId", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const post = await prisma.hikingPost.findUnique({
+      where: {
+        postId,
+      },
+    });
+    res.json([post]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// DELETE /api/posts/:postId route handler
+app.delete("/api/posts/:postId", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    console.log(postId);
+    const post = await prisma.hikingPost.delete({
+      where: {
+        postId,
+      },
+    });
+    res.json(post);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// PATCH /api/posts/:postId route handler
+app.patch("/api/posts/:postId", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { title, content, imageUrl } = req.body;
+
+    const post = await prisma.hikingPost.update({
+      where: {
+        postId,
+      },
+      data: {
+        title,
+        content,
+        imageUrl,
+      },
+    });
+
+    console.log("Updated post:", post);
+
+    res.json(post);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /api/search route handler
+app.get("/api/search", async (req, res) => {
+  try {
+    const { title } = req.query;
+    const posts = await prisma.hikingPost.findMany({
+      where: {
+        title: {
+          contains: title,
+          mode: "insensitive",
+        },
+      },
+    });
+    res.json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// PATCH /api/votes/:postId route handler
+app.patch("/api/votes/:postId", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { voteCounter } = req.body;
+
+    const hikingVote = await prisma.hikingPost.update({
+      where: {
+        postId,
+      },
+      data: {
+        voteCounter,
+      },
+    });
+
+    res.json(hikingVote);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /api/votes/:postId route handler
+app.get("/api/votes/:postId", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const hikingVote = await prisma.hikingPost.findUnique({
+      where: {
+        postId,
+      },
+    });
+    res.json(hikingVote);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// POST /api/posts/:postId/comments route handler
+app.post("/api/posts/:postId/comments", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { comment } = req.body;
+    const newComment = await prisma.comment.create({
+      data: {
+        postId, // Associate the comment with the corresponding postId
+        comment, // The content of the comment
+      },
+    });
+
+    console.log(postId, comment);
+
+    res.status(201).json(newComment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /api/posts/:postId/comments route handler 
+app.get("/api/posts/:postId/comments", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const comments = await prisma.comment.findMany({
+      where: {
+        postId,
+      },
+    });
+    res.json(comments);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /api/users route handler
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await prisma.user.findMany();
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+  
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
 });
-
-
