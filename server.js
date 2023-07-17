@@ -61,7 +61,6 @@ app.get("/api/posts", async (req, res) => {
     const posts = await prisma.hikingPost.findMany();
     res.json(posts);
 
-    console.log(posts);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -88,18 +87,28 @@ app.get("/api/posts/:postId", async (req, res) => {
 app.delete("/api/posts/:postId", async (req, res) => {
   try {
     const { postId } = req.params;
-    console.log(postId);
-    const post = await prisma.hikingPost.delete({
+
+    // Delete comments associated with the post
+    await prisma.comment.deleteMany({
       where: {
         postId,
       },
     });
-    res.json(post);
+
+    // Delete the post
+    await prisma.hikingPost.delete({
+      where: {
+        postId,
+      },
+    });
+
+    res.json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 // PATCH /api/posts/:postId route handler
 app.patch("/api/posts/:postId", async (req, res) => {
@@ -130,15 +139,16 @@ app.patch("/api/posts/:postId", async (req, res) => {
 // GET /api/search route handler
 app.get("/api/search", async (req, res) => {
   try {
-    const { title } = req.query;
+    const { query } = req.query;
     const posts = await prisma.hikingPost.findMany({
       where: {
         title: {
-          contains: title,
+          contains: query,
           mode: "insensitive",
         },
       },
     });
+
     res.json(posts);
   } catch (error) {
     console.error(error);
@@ -195,8 +205,6 @@ app.post("/api/posts/:postId/comments", async (req, res) => {
         comment, // The content of the comment
       },
     });
-
-    console.log(postId, comment);
 
     res.status(201).json(newComment);
   } catch (error) {
