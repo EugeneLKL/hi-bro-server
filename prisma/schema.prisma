@@ -15,11 +15,12 @@ model User {
   username    String       @unique
   email       String       @unique
   password    String
-  profileIm  String?
+  profileIm   String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   hikingPosts HikingPost[]
   comments    Comment[]
+  reports     Report[]
 }
 
 model HikingPost {
@@ -33,17 +34,30 @@ model HikingPost {
   voteCounter Int?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  reports     Report[]
 }
 
 model Comment {
-  commentId   String      @id @default(uuid())
-  user        User?       @relation(fields: [userId], references: [userId])
-  userId      String?
-  postId      String
-  comment     String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  hikingPost  HikingPost  @relation(fields: [postId], references: [postId])
+  commentId  String     @id @default(uuid())
+  user       User?      @relation(fields: [userId], references: [userId])
+  userId     String?
+  postId     String
+  comment    String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  hikingPost HikingPost @relation(fields: [postId], references: [postId])
+}
+
+model Report {
+  reportId      String      @id @default(uuid())
+  user          User?       @relation(fields: [userId], references: [userId])
+  userId        String?
+  hikingPost    HikingPost? @relation(fields: [postId], references: [postId])
+  postId        String?
+  reportTitle   String
+  reportContent String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Test {

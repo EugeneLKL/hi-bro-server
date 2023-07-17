@@ -239,7 +239,26 @@ app.get("/api/users", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-  
+
+// POST /api/posts/:postId/reports route handler
+app.post("/api/posts/:postId/report", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { title, content } = req.body; 
+    const newReport = await prisma.report.create({
+      data: {
+        postId, 
+        reportTitle: title,
+        reportContent: content, 
+      },
+    });
+
+    res.status(201).json(newReport);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 // Start the server
 app.listen(port, () => {
