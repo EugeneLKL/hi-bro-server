@@ -201,8 +201,8 @@ app.post("/api/posts/:postId/comments", async (req, res) => {
     const { comment } = req.body;
     const newComment = await prisma.comment.create({
       data: {
-        postId, // Associate the comment with the corresponding postId
-        comment, // The content of the comment
+        postId, 
+        comment, 
       },
     });
 
