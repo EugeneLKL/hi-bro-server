@@ -21,6 +21,7 @@ model User {
   hikingPosts HikingPost[]
   comments    Comment[]
   reports     Report[]
+  reviews     Review[]
 }
 
 model HikingPost {
@@ -60,6 +61,32 @@ model Report {
   updatedAt     DateTime    @updatedAt
 }
 
-model Test {
-  num1 String @id
+model Trail {
+  trailId           String   @id @default(uuid())
+  trailName         String
+  trailLat          String?
+  trailLng          String?
+  trailLocation     String?
+  trailType         String
+  trailDifficulty   String
+  trailLength       String
+  estimatedDuration String
+  trailDescription  String
+  amenities         String[]
+  trailImagesUrl    String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  reviews           Review[]
+}
+
+model Review {
+  reviewId      String   @id @default(uuid())
+  trail         Trail?   @relation(fields: [trailId], references: [trailId])
+  trailId       String?
+  user          User?    @relation(fields: [userId], references: [userId])
+  userId        String?
+  reviewTitle   String
+  reviewContent String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
