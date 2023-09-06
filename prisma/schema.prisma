@@ -11,22 +11,58 @@ datasource db {
 }
 
 model User {
-  userId      String       @id @default(uuid())
-  username    String       @unique
-  email       String       @unique
-  password    String
-  profileIm   String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  hikingPosts HikingPost[]
-  comments    Comment[]
-  reports     Report[]
-  reviews     Review[]
+  userId        String       @id @default(uuid())
+  userName      String       
+  userEmail     String       @unique
+  phoneNum      String       @unique
+  gender        String
+  birthDate     String
+  password      String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  profileImage  String?      // Add this field to store the profile image as binary data
+
+  travelPosts   TravelPost[]   @relation("UserTravelPosts")
+  buddyRequests BuddyRequest[] @relation("UserBuddyRequests")
+  hikingPosts   HikingPost[]   
+  comments      Comment[]      
+  reports       Report[]      
+  reviews       Review[]    
+}
+
+model TravelPost {
+  travelPostId    String        @id @default(uuid())
+  startDate       DateTime      @map("start_date")
+  endDate         DateTime      @map("end_date")
+  destination     String
+  buddyPreference Json[]        @db.Json
+  additionalInfo  String?
+  buddyId         String?     // Add this field to store the buddy's userId
+  buddyFound      Boolean       @default(false) // Indicate whether a buddy has been found
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  creator         User          @relation("UserTravelPosts", fields: [creatorId], references: [userId]) 
+  creatorId       String
+
+  buddyRequests   BuddyRequest[] @relation("TravelPostBackRequests")
+}
+
+
+model BuddyRequest {
+  buddyRequestId  String        @id @default(uuid())
+  requester      User          @relation("UserBuddyRequests", fields: [requesterId], references: [userId]) 
+  requesterId    String
+  post           TravelPost    @relation("TravelPostBackRequests", fields: [postId], references: [travelPostId])
+  postId         String
+  createdAt      DateTime      @default(now())
+  requestStatus  String        @default("Pending")
 }
 
 model HikingPost {
   postId      String    @id @default(uuid())
-  user        User?     @relation(fields: [userId], references: [userId])
   userId      String?
   title       String
   content     String
@@ -36,6 +72,7 @@ model HikingPost {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   reports     Report[]
+  user        User?     @relation(fields: [userId], references: [userId])
 }
 
 model Comment {
