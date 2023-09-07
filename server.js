@@ -54,6 +54,7 @@ app.post("/upload", upload.array("images", 10), async (req, res) => {
     );
 
     // Return the image URLs in the response
+    console.log(imageUrl);
     return res.json({ imageUrl });
   } catch (error) {
     console.error(error);
@@ -317,6 +318,7 @@ app.post("/api/trails", async (req, res) => {
       trailImagesUrl,
       estimatedDuration,
       amenities,
+      userId,
     } = req.body;
 
     const newTrail = await prisma.trail.create({
@@ -325,19 +327,20 @@ app.post("/api/trails", async (req, res) => {
         trailLat,
         trailLng,
         trailType,
-        trailDifficulty,
         trailLength,
+        trailDifficulty,
         trailDescription,
         trailImagesUrl,
         estimatedDuration,
         amenities,
+        userId,
       },
     });
 
     res.status(201).json(newTrail);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error | /api/trails" });
   }
 });
 
@@ -352,7 +355,7 @@ app.get("/api/trails", async (req, res) => {
   }
 });
 
-// GET /api/trails/:trailId route handler
+// GET /api/trails/:trailId route handler with trail rating
 app.get("/api/trails/:trailId", async (req, res) => {
   try {
     const { trailId } = req.params;
@@ -360,13 +363,14 @@ app.get("/api/trails/:trailId", async (req, res) => {
       where: {
         trailId,
       },
+      include: {
+        trailRating: true,
+      },
     });
     res.json(trail);
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error | /api/trails/:trailId" });
+    res.status(500).json({ error: "Internal Server Error | /api/trails" });
   }
 });
 
@@ -446,12 +450,13 @@ app.put("/api/trails/:trailId", async (req, res) => {
 app.post("/api/trails/:trailId/reviews", async (req, res) => {
   try {
     const { trailId } = req.params;
-    const { reviewTitle, reviewContent } = req.body;
+    const { reviewTitle, reviewContent, userId } = req.body;
     const newReview = await prisma.review.create({
       data: {
         trailId,
         reviewTitle,
         reviewContent,
+        userId,
       },
     });
 
@@ -472,6 +477,14 @@ app.get("/api/trails/:trailId/reviews", async (req, res) => {
       where: {
         trailId,
       },
+      include: {
+        user: {
+          select: {
+            userName: true,
+            profileImage: true,
+          },
+        },
+      },
     });
     res.json(reviews);
   } catch (error) {
@@ -479,6 +492,29 @@ app.get("/api/trails/:trailId/reviews", async (req, res) => {
     res
       .status(500)
       .json({ error: "Internal Server Error | /api/trails/:trailId/reviews" });
+  }
+});
+
+// POST /api/trails/:trailId/ratings route handler
+app.post("/api/trails/:trailId/rating", async (req, res) => {
+  try {
+    const { trailId } = req.params;
+    const { rating } = req.body;
+
+    const newRating = await prisma.trailRating.create({
+      data: {
+        trailId,
+        userId: req.body.userId,
+        rating,
+      },
+    });
+
+    res.status(201).json(newRating);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId/ratings" });
   }
 });
 
@@ -501,6 +537,58 @@ app.get("/api/trailSearch", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error | /api/trailSearch" });
   }
 });
+
+// POST /api/trails/:trailId/favorites route handler
+app.post("/api/trails/:trailId/favorites", async (req, res) => {
+  try {
+    const { trailId } = req.params;
+    const { userId } = req.body;
+
+    console.log(trailId, userId)
+
+    const newFavorite = await prisma.savedTrails.create({
+      data: {
+        trailId,
+        userId,
+      },
+    });
+
+    console.log(newFavorite)
+
+    res.status(201).json(newFavorite);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId/favorites" });
+  }
+});
+
+// GET /api/trails/:trailId/favorites route handler based on userId
+app.get("/api/trails/:userId/favorites", async (req, res) => {
+  try {
+    const { trailId } = req.params;
+    const { userId } = req.body;
+
+    const newFavorite = await prisma.savedTrails.findMany({
+      where: {
+        trailId,
+        userId,
+      },
+      include: {
+        trail: true,
+      },
+    });
+
+    res.status(201).json(newFavorite);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId/favorites" });
+  }
+});
+
 
 // POST the image directly to the s3 bucket
 app.post("/api/uploadImage", upload.single("image"), async (req, res) => {
@@ -924,12 +1012,10 @@ app.post("/api/createTravelBuddyPost", async (req, res) => {
 
     console.log("New Travel Post created:", newTravelPost);
 
-    res
-      .status(201)
-      .json({
-        message: "Travel Post created successfully",
-        data: newTravelPost,
-      });
+    res.status(201).json({
+      message: "Travel Post created successfully",
+      data: newTravelPost,
+    });
   } catch (error) {
     console.error("Error creating Travel Post:", error);
     res
@@ -1082,12 +1168,10 @@ app.post("/api/createTravelBuddyRequest", async (req, res) => {
 
     console.log("New Buddy Request created:", newTravelRequest);
 
-    res
-      .status(201)
-      .json({
-        message: "Travel Request created successfully",
-        data: newTravelRequest,
-      });
+    res.status(201).json({
+      message: "Travel Request created successfully",
+      data: newTravelRequest,
+    });
   } catch (error) {
     console.error("Error creating Travel Request:", error);
     res
