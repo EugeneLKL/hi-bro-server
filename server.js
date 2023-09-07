@@ -4,36 +4,38 @@ const multer = require("multer");
 const uploadFileToS3 = require("./s3Upload");
 
 const prisma = new PrismaClient();
-const cors = require('cors');
+const cors = require("cors");
 const app = express();
 const port = 5000;
 
 app.use(express.json());
 app.use(cors());
 
-const generateUploadURL = require('./s3');
+const generateUploadURL = require("./s3");
 
 app.use(express.json());
 
-const storage = multer.memoryStorage(); 
+const storage = multer.memoryStorage();
 
 // Set up Multer middleware to handle file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
 });
 
-app.get('/api/s3Url', async (req, res) => {
+app.get("/api/s3Url", async (req, res) => {
   // console log res
   console.log("res", req.query);
   try {
     const { contentType } = req.query;
     const url = await generateUploadURL(contentType);
-    console.log('done');
+    console.log("done");
 
     res.send({ url });
   } catch (error) {
-    console.error('Error generating upload URL:', error);
-    res.status(500).json({ error: 'An error occurred while generating upload URL' });
+    console.error("Error generating upload URL:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while generating upload URL" });
   }
 });
 
@@ -62,19 +64,21 @@ app.post("/upload", upload.array("images", 10), async (req, res) => {
 // POST /api/posts route handler
 app.post("/api/posts", async (req, res) => {
   try {
-    const { title, content, imageUrl } = req.body;
+    const { title, content, imageUrl, userId } = req.body;
+
     const newPost = await prisma.hikingPost.create({
       data: {
         title,
         content,
         imageUrl,
+        userId,
       },
     });
 
     res.status(201).json(newPost);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error | /api/posts" });
   }
 });
 
@@ -83,7 +87,6 @@ app.get("/api/posts", async (req, res) => {
   try {
     const posts = await prisma.hikingPost.findMany();
     res.json(posts);
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -97,6 +100,17 @@ app.get("/api/posts/:postId", async (req, res) => {
     const post = await prisma.hikingPost.findUnique({
       where: {
         postId,
+      },
+
+      //Get username and userprofilepicture with the post
+      include: {
+        user: {
+          select: {
+            userId: true,
+            userName: true,
+            profileImage: true,
+          },
+        },
       },
     });
     res.json([post]);
@@ -131,7 +145,6 @@ app.delete("/api/posts/:postId", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 // PATCH /api/posts/:postId route handler
 app.patch("/api/posts/:postId", async (req, res) => {
@@ -219,11 +232,12 @@ app.get("/api/votes/:postId", async (req, res) => {
 app.post("/api/posts/:postId/comments", async (req, res) => {
   try {
     const { postId } = req.params;
-    const { comment } = req.body;
+    const { userId, comment } = req.body;
     const newComment = await prisma.comment.create({
       data: {
-        postId, 
-        comment, 
+        postId,
+        userId,
+        comment,
       },
     });
 
@@ -234,13 +248,21 @@ app.post("/api/posts/:postId/comments", async (req, res) => {
   }
 });
 
-// GET /api/posts/:postId/comments route handler 
+// GET /api/posts/:postId/comments route handler
 app.get("/api/posts/:postId/comments", async (req, res) => {
   try {
     const { postId } = req.params;
     const comments = await prisma.comment.findMany({
       where: {
         postId,
+      },
+      include: {
+        user: {
+          select: {
+            userName: true,
+            profileImage: true,
+          },
+        },
       },
     });
     res.json(comments);
@@ -265,12 +287,12 @@ app.get("/api/users", async (req, res) => {
 app.post("/api/posts/:postId/report", async (req, res) => {
   try {
     const { postId } = req.params;
-    const { title, content } = req.body; 
+    const { title, content } = req.body;
     const newReport = await prisma.report.create({
       data: {
-        postId, 
+        postId,
         reportTitle: title,
-        reportContent: content, 
+        reportContent: content,
       },
     });
 
@@ -284,8 +306,19 @@ app.post("/api/posts/:postId/report", async (req, res) => {
 // POST /api/trails route handler
 app.post("/api/trails", async (req, res) => {
   try {
-    const { trailName, trailLat, trailLng, trailType, trailLength, trailDifficulty, trailDescription, trailImagesUrl, estimatedDuration, amenities } = req.body;
- 
+    const {
+      trailName,
+      trailLat,
+      trailLng,
+      trailType,
+      trailLength,
+      trailDifficulty,
+      trailDescription,
+      trailImagesUrl,
+      estimatedDuration,
+      amenities,
+    } = req.body;
+
     const newTrail = await prisma.trail.create({
       data: {
         trailName,
@@ -331,7 +364,9 @@ app.get("/api/trails/:trailId", async (req, res) => {
     res.json(trail);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error | /api/trails/:trailId" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId" });
   }
 });
 
@@ -347,7 +382,9 @@ app.delete("/api/trails/:trailId", async (req, res) => {
     res.json(trail);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error | /api/trails/:trailId" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId" });
   }
 });
 
@@ -399,7 +436,9 @@ app.put("/api/trails/:trailId", async (req, res) => {
     res.json(trail);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error | /api/trails/:trailId" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId" });
   }
 });
 
@@ -419,7 +458,9 @@ app.post("/api/trails/:trailId/reviews", async (req, res) => {
     res.status(201).json(newReview);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error | /api/trails/:trailId/reviews" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId/reviews" });
   }
 });
 
@@ -435,7 +476,9 @@ app.get("/api/trails/:trailId/reviews", async (req, res) => {
     res.json(reviews);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error | /api/trails/:trailId/reviews" });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error | /api/trails/:trailId/reviews" });
   }
 });
 
@@ -460,13 +503,13 @@ app.get("/api/trailSearch", async (req, res) => {
 });
 
 // POST the image directly to the s3 bucket
-app.post('/api/uploadImage', upload.single('image'), async (req, res) => {
+app.post("/api/uploadImage", upload.single("image"), async (req, res) => {
   try {
     const { image } = req.file;
     const userId = req.body.userId; // Assuming you have the userId available in the request body
 
     // Extract the file extension from the original filename
-    const fileExtension = image.originalname.split('.').pop();
+    const fileExtension = image.originalname.split(".").pop();
     console.log(fileExtension);
 
     // Generate a pre-signed URL for image upload using the userId and file extension
@@ -475,19 +518,29 @@ app.post('/api/uploadImage', upload.single('image'), async (req, res) => {
 
     // Upload the image to the S3 URL using a library like axios or fetch
     // Example using axios:
-    await axios.put(s3Url, image.buffer, { headers: { 'Content-Type': image.mimetype } });
+    await axios.put(s3Url, image.buffer, {
+      headers: { "Content-Type": image.mimetype },
+    });
 
     res.status(200).json({ s3Url });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).json({ error: 'An error occurred while uploading image' });
+    console.error("Error uploading image:", error);
+    res.status(500).json({ error: "An error occurred while uploading image" });
   }
 });
 
 // Receive the data for new registered user send from frontend
-app.post("/api/register", upload.single('profilePicture'), async (req, res) => {
+app.post("/api/register", upload.single("profilePicture"), async (req, res) => {
   try {
-    const { userName, userEmail, password, phoneNum, birthDate, gender, profileImage } = req.body;
+    const {
+      userName,
+      userEmail,
+      password,
+      phoneNum,
+      birthDate,
+      gender,
+      profileImage,
+    } = req.body;
 
     // Diospaly profile image
     console.log("profileImage", profileImage);
@@ -505,7 +558,6 @@ app.post("/api/register", upload.single('profilePicture'), async (req, res) => {
       },
     });
 
-
     res.status(201).json(newUser);
   } catch (error) {
     console.log(error);
@@ -515,7 +567,6 @@ app.post("/api/register", upload.single('profilePicture'), async (req, res) => {
 
 // Check whether the email has been existed in the database
 app.get("/api/checkEmail", async (req, res) => {
-
   console.log("Backend received");
 
   // Check what has received
@@ -548,7 +599,6 @@ app.get("/api/checkEmail", async (req, res) => {
 
 // Check whether the phone has been existed in the database
 app.get("/api/checkPhone", async (req, res) => {
-
   console.log("Backend received");
 
   // Check what has received
@@ -615,7 +665,7 @@ app.get("/api/getUserInfo/:userID", async (req, res) => {
     console.log("Inside try");
     const result = await prisma.user.findUnique({
       where: {
-        userId: userID
+        userId: userID,
       },
     });
     console.log(result);
@@ -627,30 +677,28 @@ app.get("/api/getUserInfo/:userID", async (req, res) => {
 });
 
 // Get the image URL for a user
-app.get('/api/getUserImageURL/:userId', async (req, res) => {
+app.get("/api/getUserImageURL/:userId", async (req, res) => {
   try {
     console.log("Get user image");
     const userId = req.params.userId;
     // Fetch user data from the database
     const userData = await getUserData(userId);
     if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
     // Get the profileImage URL from the user data
     const imageUrl = userData.profileImage;
     res.json({ imageUrl });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
 
 // Edit Profile
 
 // Add a new PATCH route to update the user's name
-app.patch('/api/updateUserName/:userId', async (req, res) => {
+app.patch("/api/updateUserName/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newName } = req.body;
 
@@ -667,13 +715,15 @@ app.patch('/api/updateUserName/:userId', async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user name:', error);
-    res.status(500).json({ error: 'An error occurred while updating user name' });
+    console.error("Error updating user name:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user name" });
   }
 });
 
 // Add a new PATCH route to update the user's gender
-app.patch('/api/updateUserGender/:userId', async (req, res) => {
+app.patch("/api/updateUserGender/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newGender } = req.body;
   try {
@@ -688,13 +738,15 @@ app.patch('/api/updateUserGender/:userId', async (req, res) => {
     });
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user gender:', error);
-    res.status(500).json({ error: 'An error occurred while updating user gender' });
+    console.error("Error updating user gender:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user gender" });
   }
 });
 
 // Add a new PATCH route to update the user's birth date
-app.patch('/api/updateUserBirthdate/:userId', async (req, res) => {
+app.patch("/api/updateUserBirthdate/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newBirthDate } = req.body;
   // display
@@ -712,13 +764,15 @@ app.patch('/api/updateUserBirthdate/:userId', async (req, res) => {
     });
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user birth date:', error);
-    res.status(500).json({ error: 'An error occurred while updating user birth date' });
+    console.error("Error updating user birth date:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user birth date" });
   }
 });
 
 // Add a new PATCH route to update the user's phone number
-app.patch('/api/updateUserPhone/:userId', async (req, res) => {
+app.patch("/api/updateUserPhone/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newPhone } = req.body;
 
@@ -732,7 +786,9 @@ app.patch('/api/updateUserPhone/:userId', async (req, res) => {
 
     if (existingUserWithPhone && existingUserWithPhone.userId !== userId) {
       // Another user is already using the new phone number
-      return res.status(400).json({ error: 'Phone number is already in use by another user' });
+      return res
+        .status(400)
+        .json({ error: "Phone number is already in use by another user" });
     }
 
     // Update the user's phone number in the database
@@ -747,13 +803,15 @@ app.patch('/api/updateUserPhone/:userId', async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user phone number:', error);
-    res.status(500).json({ error: 'An error occurred while updating user phone number' });
+    console.error("Error updating user phone number:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user phone number" });
   }
 });
 
 // check user password
-app.get('/api/getUserPassword', async (req, res) => {
+app.get("/api/getUserPassword", async (req, res) => {
   console.log("Backend received");
   // Check what has received
   console.log(req.query);
@@ -767,7 +825,7 @@ app.get('/api/getUserPassword', async (req, res) => {
         userId: userId,
       },
     });
-    console.log('Result: ', result);
+    console.log("Result: ", result);
     res.status(200).json(result);
   } catch (error) {
     console.log(error);
@@ -776,11 +834,11 @@ app.get('/api/getUserPassword', async (req, res) => {
 });
 
 // Add a new PATCH route to update the user's password
-app.patch('/api/updateUserPassword/:userId', async (req, res) => {
+app.patch("/api/updateUserPassword/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newPassword } = req.body;
 
-  console.log('New password: ', newPassword);
+  console.log("New password: ", newPassword);
 
   try {
     const updatedUser = await prisma.user.update({
@@ -793,13 +851,15 @@ app.patch('/api/updateUserPassword/:userId', async (req, res) => {
     });
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user password:', error);
-    res.status(500).json({ error: 'An error occurred while updating user password' });
+    console.error("Error updating user password:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user password" });
   }
 });
 
 // Add a new PATCH route to update the user's profile picture
-app.patch('/api/updateUserProfileImage/:userId', async (req, res) => {
+app.patch("/api/updateUserProfileImage/:userId", async (req, res) => {
   const { userId } = req.params;
   const { newProfilePhoto } = req.body;
   console.log("new Profile Picture", newProfilePhoto);
@@ -814,18 +874,26 @@ app.patch('/api/updateUserProfileImage/:userId', async (req, res) => {
     });
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.error('Error updating user profile picture:', error);
-    res.status(500).json({ error: 'An error occurred while updating user profile picture' });
+    console.error("Error updating user profile picture:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating user profile picture" });
   }
 });
-
 
 // Travel
 
 // CREATE travle post
-app.post('/api/createTravelBuddyPost', async (req, res) => {
+app.post("/api/createTravelBuddyPost", async (req, res) => {
   try {
-    const { startDate, endDate, destination, buddyPreference, additionalInfo, userId } = req.body;
+    const {
+      startDate,
+      endDate,
+      destination,
+      buddyPreference,
+      additionalInfo,
+      userId,
+    } = req.body;
 
     // Convert startDate and endDate to Date objects
     const formattedStartDate = new Date(startDate);
@@ -854,18 +922,24 @@ app.post('/api/createTravelBuddyPost', async (req, res) => {
       },
     });
 
-    console.log('New Travel Post created:', newTravelPost);
+    console.log("New Travel Post created:", newTravelPost);
 
-    res.status(201).json({ message: 'Travel Post created successfully', data: newTravelPost });
+    res
+      .status(201)
+      .json({
+        message: "Travel Post created successfully",
+        data: newTravelPost,
+      });
   } catch (error) {
-    console.error('Error creating Travel Post:', error);
-    res.status(500).json({ error: 'An error occurred while creating the Travel Post' });
+    console.error("Error creating Travel Post:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the Travel Post" });
   }
 });
 
 // GET the travel post
-app.get('/api/getTravelBuddyPost', async (req, res) => {
-
+app.get("/api/getTravelBuddyPost", async (req, res) => {
   console.log("Get Post Backend");
 
   try {
@@ -875,41 +949,44 @@ app.get('/api/getTravelBuddyPost', async (req, res) => {
       },
     });
 
-    console.log('All Travel Post:', allTravelPost);
+    console.log("All Travel Post:", allTravelPost);
 
     res.status(200).json(allTravelPost);
   } catch (error) {
-    console.error('Error getting all Travel Post:', error);
-    res.status(500).json({ error: 'An error occurred while getting all Travel Post' });
+    console.error("Error getting all Travel Post:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting all Travel Post" });
   }
 });
 
 // GET travle post details by travelPostId
-app.get('/api/getTravelBuddyPostDetails/:travelPostId', async (req, res) => {
+app.get("/api/getTravelBuddyPostDetails/:travelPostId", async (req, res) => {
   try {
     const { travelPostId } = req.params;
     const singleTravelPost = await prisma.travelPost.findFirst({
       where: {
         travelPostId: travelPostId,
       },
-      include: {
-      },
+      include: {},
     });
     console.log(`Single Travel Post Details ${singleTravelPost}`);
     res.status(200).json(singleTravelPost);
   } catch (error) {
-    console.error('Error getting single Travel Post:', error);
-    res.status(500).json({ error: 'An error occurred while getting single Travel Post' });
+    console.error("Error getting single Travel Post:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting single Travel Post" });
   }
 });
 
 // DELETE travel post by id (/api/deleteTravelBuddyPost)
-app.delete('/api/deleteTravelBuddyPost/:travelPostId', async (req, res) => {
+app.delete("/api/deleteTravelBuddyPost/:travelPostId", async (req, res) => {
   try {
     const { travelPostId } = req.params;
 
     if (!travelPostId) {
-      return res.status(400).json({ error: 'Missing travelPostId parameter' });
+      return res.status(400).json({ error: "Missing travelPostId parameter" });
     }
 
     // First, find the TravelPost to obtain related BuddyRequest IDs
@@ -927,11 +1004,13 @@ app.delete('/api/deleteTravelBuddyPost/:travelPostId', async (req, res) => {
     });
 
     if (!travelPost) {
-      return res.status(404).json({ error: 'Travel Post not found' });
+      return res.status(404).json({ error: "Travel Post not found" });
     }
 
     // Extract BuddyRequest IDs
-    const buddyRequestIds = travelPost.buddyRequests.map((request) => request.buddyRequestId);
+    const buddyRequestIds = travelPost.buddyRequests.map(
+      (request) => request.buddyRequestId
+    );
 
     // Use Prisma to delete related BuddyRequest records first
     await prisma.buddyRequest.deleteMany({
@@ -952,18 +1031,15 @@ app.delete('/api/deleteTravelBuddyPost/:travelPostId', async (req, res) => {
     console.log(`Deleted Travel Post ${travelPostId}`);
     res.status(200).json({ message: `Deleted Travel Post ${travelPostId}` });
   } catch (error) {
-    console.error('Error deleting Travel Post:', error);
-    res.status(500).json({ error: 'An error occurred while deleting Travel Post' });
+    console.error("Error deleting Travel Post:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while deleting Travel Post" });
   }
 });
 
-
-
-
-
-
 // GET travel request log
-app.get('/api/getTravelBuddyRequestLog', async (req, res) => {
+app.get("/api/getTravelBuddyRequestLog", async (req, res) => {
   try {
     const allTravelRequest = await prisma.BuddyRequest.findMany({
       include: {
@@ -974,14 +1050,15 @@ app.get('/api/getTravelBuddyRequestLog', async (req, res) => {
     // console.log(`All Buddy Requests: ${JSON.stringify(allTravelRequest)}`);
     res.status(200).json(allTravelRequest);
   } catch (error) {
-    console.error('Error getting all Buddy Requests:', error);
-    res.status(500).json({ error: 'An error occurred while getting all Buddy Requests' });
+    console.error("Error getting all Buddy Requests:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting all Buddy Requests" });
   }
 });
 
-
 // CREATE travel request
-app.post('/api/createTravelBuddyRequest', async (req, res) => {
+app.post("/api/createTravelBuddyRequest", async (req, res) => {
   console.log("Create Request Backend");
   console.log(req.body);
 
@@ -1003,24 +1080,31 @@ app.post('/api/createTravelBuddyRequest', async (req, res) => {
       },
     });
 
-    console.log('New Buddy Request created:', newTravelRequest);
+    console.log("New Buddy Request created:", newTravelRequest);
 
-    res.status(201).json({ message: 'Travel Request created successfully', data: newTravelRequest });
+    res
+      .status(201)
+      .json({
+        message: "Travel Request created successfully",
+        data: newTravelRequest,
+      });
   } catch (error) {
-    console.error('Error creating Travel Request:', error);
-    res.status(500).json({ error: 'An error occurred while creating the Travel Request' });
+    console.error("Error creating Travel Request:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the Travel Request" });
   }
 });
 
 // Get the requested posts with requester and post owner information
-app.get('/api/getRequestedPosts', async (req, res) => {
+app.get("/api/getRequestedPosts", async (req, res) => {
   try {
     const requestedPosts = await prisma.BuddyRequest.findMany({
       where: {
         post: {
           buddyFound: false, // Only get posts where buddyFound is false
         },
-        requestStatus: 'Pending', // Filter by requestStatus 'Pending'
+        requestStatus: "Pending", // Filter by requestStatus 'Pending'
       },
       include: {
         post: {
@@ -1049,7 +1133,7 @@ app.get('/api/getRequestedPosts', async (req, res) => {
       },
     });
 
-    console.log('Requested Posts:', requestedPosts);
+    console.log("Requested Posts:", requestedPosts);
 
     const formattedRequestedPosts = requestedPosts.map((request) => {
       return {
@@ -1060,17 +1144,19 @@ app.get('/api/getRequestedPosts', async (req, res) => {
 
     res.status(200).json(formattedRequestedPosts);
   } catch (error) {
-    console.error('Error getting requested posts:', error);
-    res.status(500).json({ error: 'An error occurred while getting requested posts' });
+    console.error("Error getting requested posts:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting requested posts" });
   }
 });
 
 // Get the pending request post with the post owner information
-app.get('/api/getPendingRequests', async (req, res) => {
+app.get("/api/getPendingRequests", async (req, res) => {
   console.log("Trying");
   try {
     const { userId } = req.query;
-    console.log("userId", userId)
+    console.log("userId", userId);
     const pendingRequests = await prisma.BuddyRequest.findMany({
       include: {
         post: {
@@ -1107,12 +1193,14 @@ app.get('/api/getPendingRequests', async (req, res) => {
     console.log("formatted Pending Requests ", formattedPendingRequests);
     res.status(200).json(formattedPendingRequests);
   } catch (error) {
-    console.error('Error getting pending requests:', error);
-    res.status(500).json({ error: 'An error occurred while getting pending requests' });
+    console.error("Error getting pending requests:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting pending requests" });
   }
 });
 
-app.post('/api/acceptBuddyRequest', async (req, res) => {
+app.post("/api/acceptBuddyRequest", async (req, res) => {
   const { userId, postId } = req.body;
 
   try {
@@ -1134,7 +1222,7 @@ app.post('/api/acceptBuddyRequest', async (req, res) => {
         },
       },
       data: {
-        requestStatus: 'Rejected',
+        requestStatus: "Rejected",
       },
     });
 
@@ -1147,26 +1235,27 @@ app.post('/api/acceptBuddyRequest', async (req, res) => {
     });
 
     if (!buddyRequest) {
-      throw new Error('Buddy request not found');
+      throw new Error("Buddy request not found");
     }
 
     // Update the BuddyRequest to set requestStatus to 'Accepted'
     const updatedBuddyRequest = await prisma.buddyRequest.update({
       where: { buddyRequestId: buddyRequest.buddyRequestId },
       data: {
-        requestStatus: 'Accepted',
+        requestStatus: "Accepted",
       },
     });
 
-    res.status(200).json({ message: 'Buddy request accepted successfully' });
+    res.status(200).json({ message: "Buddy request accepted successfully" });
   } catch (error) {
-    console.error('Error accepting buddy request:', error);
-    res.status(500).json({ error: 'An error occurred while accepting the buddy request' });
+    console.error("Error accepting buddy request:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while accepting the buddy request" });
   }
 });
 
-
-app.post('/api/rejectBuddyRequest', async (req, res) => {
+app.post("/api/rejectBuddyRequest", async (req, res) => {
   const { userId, postId } = req.body;
 
   console.log(userId, postId);
@@ -1181,28 +1270,28 @@ app.post('/api/rejectBuddyRequest', async (req, res) => {
     });
 
     if (!buddyRequest) {
-      throw new Error('Buddy request not found');
+      throw new Error("Buddy request not found");
     }
 
     // Update the BuddyRequest to set requestStatus to 'Rejected'
     await prisma.buddyRequest.update({
       where: { buddyRequestId: buddyRequest.buddyRequestId },
       data: {
-        requestStatus: 'Rejected',
+        requestStatus: "Rejected",
       },
     });
 
-    res.status(200).json({ message: 'Buddy request rejected successfully' });
+    res.status(200).json({ message: "Buddy request rejected successfully" });
   } catch (error) {
-    console.error('Error rejecting buddy request:', error);
-    res.status(500).json({ error: 'An error occurred while rejecting the buddy request' });
+    console.error("Error rejecting buddy request:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while rejecting the buddy request" });
   }
 });
 
-
-
 // Get the post that has been find a buddy
-app.get('/api/getBuddyFoundPosts', async (req, res) => {
+app.get("/api/getBuddyFoundPosts", async (req, res) => {
   try {
     const buddyFoundPosts = await prisma.travelPost.findMany({
       where: {
@@ -1215,18 +1304,20 @@ app.get('/api/getBuddyFoundPosts', async (req, res) => {
     console.log("buddy found posts", buddyFoundPosts);
     res.status(200).json(buddyFoundPosts);
   } catch (error) {
-    console.error('Error getting buddy found posts:', error);
-    res.status(500).json({ error: 'An error occurred while getting buddy found posts' });
+    console.error("Error getting buddy found posts:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting buddy found posts" });
   }
 });
 
 // ---------------------------Useless-----------------------------------------
 
 // Get requester information based on requesterIds
-app.get('/api/getRequesters', async (req, res) => {
+app.get("/api/getRequesters", async (req, res) => {
   try {
     const { requesterIds } = req.query;
-    const requesterIdsArray = requesterIds.split(',');
+    const requesterIdsArray = requesterIds.split(",");
 
     const requesters = await prisma.BuddyRequest.findMany({
       where: {
@@ -1239,7 +1330,7 @@ app.get('/api/getRequesters', async (req, res) => {
       },
     });
 
-    const requesterInfo = requesters.map(requester => ({
+    const requesterInfo = requesters.map((requester) => ({
       requesterId: requester.requesterId,
       profilePic: requester.requester.profilePic,
       name: requester.requester.name,
@@ -1247,13 +1338,15 @@ app.get('/api/getRequesters', async (req, res) => {
 
     res.status(200).json(requesterInfo);
   } catch (error) {
-    console.error('Error getting requester information:', error);
-    res.status(500).json({ error: 'An error occurred while getting requester information' });
+    console.error("Error getting requester information:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting requester information" });
   }
 });
 
 // Get the travel posts owned by the user
-app.get('/api/getUserOwnedPosts', async (req, res) => {
+app.get("/api/getUserOwnedPosts", async (req, res) => {
   try {
     const userOwnedPosts = await prisma.TravelPost.findMany({
       where: {
@@ -1267,17 +1360,19 @@ app.get('/api/getUserOwnedPosts', async (req, res) => {
       },
     });
 
-    console.log('User Owned Posts:', userOwnedPosts);
+    console.log("User Owned Posts:", userOwnedPosts);
 
     res.status(200).json(userOwnedPosts);
   } catch (error) {
-    console.error('Error getting user owned posts:', error);
-    res.status(500).json({ error: 'An error occurred while getting user owned posts' });
+    console.error("Error getting user owned posts:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting user owned posts" });
   }
 });
 
 // Update the status when the owner accepts a buddy request
-app.put('/api/acceptBuddyRequest/:postId/:requesterId', async (req, res) => {
+app.put("/api/acceptBuddyRequest/:postId/:requesterId", async (req, res) => {
   const { postId, requesterId } = req.params;
 
   try {
@@ -1293,16 +1388,20 @@ app.put('/api/acceptBuddyRequest/:postId/:requesterId', async (req, res) => {
 
     // You can perform additional actions here, such as updating the BuddyRequest status
 
-    console.log('Travel Post status updated:', updatedTravelPost);
+    console.log("Travel Post status updated:", updatedTravelPost);
 
-    res.status(200).json({ message: 'Travel Post status updated successfully' });
+    res
+      .status(200)
+      .json({ message: "Travel Post status updated successfully" });
   } catch (error) {
-    console.error('Error updating Travel Post status:', error);
-    res.status(500).json({ error: 'An error occurred while updating Travel Post status' });
+    console.error("Error updating Travel Post status:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating Travel Post status" });
   }
 });
 
-app.put('/api/acceptBuddyRequest/:postId/:requesterId', async (req, res) => {
+app.put("/api/acceptBuddyRequest/:postId/:requesterId", async (req, res) => {
   const { postId, requesterId } = req.params;
 
   try {
@@ -1316,19 +1415,23 @@ app.put('/api/acceptBuddyRequest/:postId/:requesterId', async (req, res) => {
       },
     });
 
-    console.log('Travel Post status updated:', updatedTravelPost);
+    console.log("Travel Post status updated:", updatedTravelPost);
 
     // You can update the BuddyRequest status here
 
-    res.status(200).json({ message: 'Travel Post status updated successfully' });
+    res
+      .status(200)
+      .json({ message: "Travel Post status updated successfully" });
   } catch (error) {
-    console.error('Error updating Travel Post status:', error);
-    res.status(500).json({ error: 'An error occurred while updating Travel Post status' });
+    console.error("Error updating Travel Post status:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating Travel Post status" });
   }
 });
 
 // Get the requester user
-app.get('/api/getUserPosts/:userID', async (req, res) => {
+app.get("/api/getUserPosts/:userID", async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1338,7 +1441,7 @@ app.get('/api/getUserPosts/:userID', async (req, res) => {
       where: {
         creatorId: userId,
         travelPostId: {
-          in: postIds.split(','),
+          in: postIds.split(","),
         },
       },
       include: {
@@ -1346,17 +1449,19 @@ app.get('/api/getUserPosts/:userID', async (req, res) => {
       },
     });
 
-    console.log('User Posts:', userPosts);
+    console.log("User Posts:", userPosts);
 
     res.status(200).json(userPosts);
   } catch (error) {
-    console.error('Error getting user posts:', error);
-    res.status(500).json({ error: 'An error occurred while getting user posts' });
+    console.error("Error getting user posts:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting user posts" });
   }
 });
 
 // Get the post id that has been requested
-app.get('/api/getTravelBuddyRequest', async (req, res) => {
+app.get("/api/getTravelBuddyRequest", async (req, res) => {
   try {
     const requestedPostIds = await prisma.BuddyRequest.findMany({
       select: {
@@ -1365,12 +1470,14 @@ app.get('/api/getTravelBuddyRequest', async (req, res) => {
       },
     });
 
-    console.log('Requested Post IDs:', requestedPostIds);
+    console.log("Requested Post IDs:", requestedPostIds);
 
     res.status(200).json(requestedPostIds);
   } catch (error) {
-    console.error('Error getting requested post IDs:', error);
-    res.status(500).json({ error: 'An error occurred while getting requested post IDs' });
+    console.error("Error getting requested post IDs:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting requested post IDs" });
   }
 });
 
