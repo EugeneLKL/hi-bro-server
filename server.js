@@ -1046,16 +1046,19 @@ app.get("/api/getTravelBuddyPost", async (req, res) => {
   }
 });
 
-// GET travle post details by travelPostId
+
+
+// GET travel post details by travelPostId
 app.get("/api/getTravelBuddyPostDetails/:travelPostId", async (req, res) => {
   try {
     const { travelPostId } = req.params;
+    
     const singleTravelPost = await prisma.travelPost.findFirst({
       where: {
-        travelPostId: travelPostId,
+        travelPostId: travelPostId, // This assumes the primary key column name in your Prisma model is 'id'. Replace with 'travelPostId' if that's your primary key.
       },
-      include: {},
     });
+
     console.log(`Single Travel Post Details ${singleTravelPost}`);
     res.status(200).json(singleTravelPost);
   } catch (error) {
@@ -1065,6 +1068,26 @@ app.get("/api/getTravelBuddyPostDetails/:travelPostId", async (req, res) => {
       .json({ error: "An error occurred while getting single Travel Post" });
   }
 });
+
+// /api/getAllBuddyRequests
+app.get("/api/getAllBuddyRequests", async (req, res) => {
+  try {
+    const allBuddyRequests = await prisma.buddyRequest.findMany({
+      include: {
+        requester: true,
+        post: true,
+      },
+    });
+    console.log('All Buddy Requests:', allBuddyRequests );
+    res.status(200).json(allBuddyRequests);
+  } catch (error) {
+    console.error("Error getting all Buddy Requests:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while getting all Buddy Requests" });
+  }
+});
+
 
 // DELETE travel post by id (/api/deleteTravelBuddyPost)
 app.delete("/api/deleteTravelBuddyPost/:travelPostId", async (req, res) => {
