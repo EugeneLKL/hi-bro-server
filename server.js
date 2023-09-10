@@ -1002,6 +1002,26 @@ app.get("/api/getAllBuddyRequests", async (req, res) => {
   }
 });
 
+// /api/deleteBuddyRequest/${requestId}
+app.delete("/api/deleteBuddyRequest/:requestId", async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const deletedBuddyRequest = await prisma.buddyRequest.delete({
+      where: {
+        buddyRequestId: requestId,
+      },
+    });
+    console.log(`Deleted Buddy Request ${requestId}`);
+    res.status(200).json({ message: `Deleted Buddy Request ${requestId}` });
+  } catch (error) {
+    console.error("Error deleting Buddy Request:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while deleting Buddy Request" });
+  }
+});
+
+
 
 // DELETE travel post by id (/api/deleteTravelBuddyPost)
 app.delete("/api/deleteTravelBuddyPost/:travelPostId", async (req, res) => {
@@ -1189,10 +1209,15 @@ app.get("/api/getPendingRequests", async (req, res) => {
             endDate: true,
             destination: true,
             buddyFound: true,
+            buddyPreference: true,
+            additionalInfo: true,
             creator: {
               select: {
                 userId: true,
                 userName: true,
+                profileImage: true,
+                birthDate: true,
+                gender: true,
               },
             },
           },
@@ -1208,7 +1233,9 @@ app.get("/api/getPendingRequests", async (req, res) => {
     console.log("pending requests", pendingRequests);
     const formattedPendingRequests = pendingRequests.map((request) => {
       return {
+        buddyRequestId: request.buddyRequestId,
         post: request.post,
+        creator: request.post.creator,
         requester: request.requester,
         requestStatus: request.requestStatus,
       };
