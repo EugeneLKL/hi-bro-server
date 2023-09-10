@@ -11,54 +11,56 @@ datasource db {
 }
 
 model User {
-  userId        String       @id @default(uuid())
-  userName      String       
-  userEmail     String       @unique
-  phoneNum      String       @unique
-  gender        String
-  birthDate     String
-  password      String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  userId    String   @id @default(uuid())
+  userName  String
+  userEmail String   @unique
+  phoneNum  String   @unique
+  gender    String
+  birthDate String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  profileImage  String?      // Add this field to store the profile image as binary data
+  profileImage String? // Add this field to store the profile image as binary data
 
   travelPosts   TravelPost[]   @relation("UserTravelPosts")
   buddyRequests BuddyRequest[] @relation("UserBuddyRequests")
-  hikingPosts   HikingPost[]   
-  comments      Comment[]      
-  reports       Report[]      
-  reviews       Review[]    
+  hikingPosts   HikingPost[]
+  comments      Comment[]
+  reports       Report[]
+  reviews       Review[]
+  trail         Trail[]
+  TrailRating   TrailRating[]
+  SavedTrails   SavedTrails[]
 }
 
 model TravelPost {
-  travelPostId    String        @id @default(uuid())
-  startDate       DateTime      @map("start_date")
-  endDate         DateTime      @map("end_date")
+  travelPostId    String   @id @default(uuid())
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
   destination     String
-  buddyPreference Json[]        @db.Json
+  buddyPreference Json[]   @db.Json
   additionalInfo  String?
-  buddyId         String?     // Add this field to store the buddy's userId
-  buddyFound      Boolean       @default(false) // Indicate whether a buddy has been found
+  buddyId         String? // Add this field to store the buddy's userId
+  buddyFound      Boolean  @default(false) // Indicate whether a buddy has been found
 
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  creator         User          @relation("UserTravelPosts", fields: [creatorId], references: [userId]) 
-  creatorId       String
+  creator   User   @relation("UserTravelPosts", fields: [creatorId], references: [userId])
+  creatorId String
 
-  buddyRequests   BuddyRequest[] @relation("TravelPostBackRequests")
+  buddyRequests BuddyRequest[] @relation("TravelPostBackRequests")
 }
 
-
 model BuddyRequest {
-  buddyRequestId  String        @id @default(uuid())
-  requester      User          @relation("UserBuddyRequests", fields: [requesterId], references: [userId]) 
+  buddyRequestId String     @id @default(uuid())
+  requester      User       @relation("UserBuddyRequests", fields: [requesterId], references: [userId])
   requesterId    String
-  post           TravelPost    @relation("TravelPostBackRequests", fields: [postId], references: [travelPostId])
+  post           TravelPost @relation("TravelPostBackRequests", fields: [postId], references: [travelPostId])
   postId         String
-  createdAt      DateTime      @default(now())
-  requestStatus  String        @default("Pending")
+  createdAt      DateTime   @default(now())
+  requestStatus  String     @default("Pending")
 }
 
 model HikingPost {
@@ -99,11 +101,10 @@ model Report {
 }
 
 model Trail {
-  trailId           String   @id @default(uuid())
+  trailId           String        @id @default(uuid())
   trailName         String
   trailLat          String?
   trailLng          String?
-  trailLocation     String?
   trailType         String
   trailDifficulty   String
   trailLength       String
@@ -111,9 +112,13 @@ model Trail {
   trailDescription  String
   amenities         String[]
   trailImagesUrl    String[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  userId            String?
+  user              User?         @relation(fields: [userId], references: [userId])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   reviews           Review[]
+  trailRating       TrailRating[]
+  SavedTrails       SavedTrails[]
 }
 
 model Review {
@@ -124,6 +129,27 @@ model Review {
   userId        String?
   reviewTitle   String
   reviewContent String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TrailRating {
+  trailRatingId String   @id @default(uuid())
+  trail         Trail?   @relation(fields: [trailId], references: [trailId])
+  trailId       String?
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [userId])
+  rating        Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SavedTrails {
+  savedTrailsId String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [userId])
+  trail         Trail?   @relation(fields: [trailId], references: [trailId])
+  trailId       String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
