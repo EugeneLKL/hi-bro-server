@@ -1266,6 +1266,7 @@ app.get("/api/getRequestedPosts", async (req, res) => {
       return {
         post: request.post,
         requester: request.requester,
+        requestId: request.buddyRequestId,
       };
     });
 
