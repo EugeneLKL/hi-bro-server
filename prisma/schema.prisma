@@ -148,8 +148,9 @@ model SavedTrails {
   savedTrailsId String   @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [userId])
-  trail         Trail?   @relation(fields: [trailId], references: [trailId])
-  trailId       String
+  trail         Trail?   @relation(fields: [trailId], references: [trailId], onDelete: Cascade)
+  trailId       String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+

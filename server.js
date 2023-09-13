@@ -365,6 +365,7 @@ app.get("/api/trails/:trailId", async (req, res) => {
       },
       include: {
         trailRating: true,
+        SavedTrails: true,
       },
     });
     res.json(trail);
@@ -544,7 +545,7 @@ app.post("/api/trails/:trailId/favorites", async (req, res) => {
     const { trailId } = req.params;
     const { userId } = req.body;
 
-    console.log(trailId, userId)
+    console.log(trailId, userId);
 
     const newFavorite = await prisma.savedTrails.create({
       data: {
@@ -553,14 +554,16 @@ app.post("/api/trails/:trailId/favorites", async (req, res) => {
       },
     });
 
-    console.log(newFavorite)
+    console.log(newFavorite);
 
     res.status(201).json(newFavorite);
   } catch (error) {
     console.error(error);
     res
       .status(500)
-      .json({ error: "Internal Server Error | /api/trails/:trailId/favorites" });
+      .json({
+        error: "Internal Server Error | /api/trails/:trailId/favorites",
+      });
   }
 });
 
@@ -585,10 +588,35 @@ app.get("/api/trails/:userId/favorites", async (req, res) => {
     console.error(error);
     res
       .status(500)
-      .json({ error: "Internal Server Error | /api/trails/:trailId/favorites" });
+      .json({
+        error: "Internal Server Error | /api/trails/:trailId/favorites",
+      });
   }
 });
 
+// Delete /api/trails/:trailId/favorites route handler
+app.delete("/api/trails/:trailId/favorites", async (req, res) => {
+  try {
+    const { trailId } = req.params;
+    const { userId } = req.body;
+
+    const trail = await prisma.savedTrails.delete({
+      where: {
+        trailId,
+        userId,
+      },
+    });
+
+    res.json(trail);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({
+        error: "Internal Server Error | /api/trails/:trailId/favorites",
+      });
+  }
+});
 
 // POST the image directly to the s3 bucket
 app.post("/api/uploadImage", upload.single("image"), async (req, res) => {
@@ -1046,13 +1074,11 @@ app.get("/api/getTravelBuddyPost", async (req, res) => {
   }
 });
 
-
-
 // GET travel post details by travelPostId
 app.get("/api/getTravelBuddyPostDetails/:travelPostId", async (req, res) => {
   try {
     const { travelPostId } = req.params;
-    
+
     const singleTravelPost = await prisma.travelPost.findFirst({
       where: {
         travelPostId: travelPostId, // This assumes the primary key column name in your Prisma model is 'id'. Replace with 'travelPostId' if that's your primary key.
@@ -1078,7 +1104,7 @@ app.get("/api/getAllBuddyRequests", async (req, res) => {
         post: true,
       },
     });
-    console.log('All Buddy Requests:', allBuddyRequests );
+    console.log("All Buddy Requests:", allBuddyRequests);
     res.status(200).json(allBuddyRequests);
   } catch (error) {
     console.error("Error getting all Buddy Requests:", error);
@@ -1087,27 +1113,6 @@ app.get("/api/getAllBuddyRequests", async (req, res) => {
       .json({ error: "An error occurred while getting all Buddy Requests" });
   }
 });
-
-// /api/deleteBuddyRequest/${requestId}
-app.delete("/api/deleteBuddyRequest/:requestId", async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const deletedBuddyRequest = await prisma.buddyRequest.delete({
-      where: {
-        buddyRequestId: requestId,
-      },
-    });
-    console.log(`Deleted Buddy Request ${requestId}`);
-    res.status(200).json({ message: `Deleted Buddy Request ${requestId}` });
-  } catch (error) {
-    console.error("Error deleting Buddy Request:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while deleting Buddy Request" });
-  }
-});
-
-
 
 // DELETE travel post by id (/api/deleteTravelBuddyPost)
 app.delete("/api/deleteTravelBuddyPost/:travelPostId", async (req, res) => {
@@ -1266,7 +1271,6 @@ app.get("/api/getRequestedPosts", async (req, res) => {
       return {
         post: request.post,
         requester: request.requester,
-        requestId: request.buddyRequestId,
       };
     });
 
@@ -1294,15 +1298,10 @@ app.get("/api/getPendingRequests", async (req, res) => {
             endDate: true,
             destination: true,
             buddyFound: true,
-            buddyPreference: true,
-            additionalInfo: true,
             creator: {
               select: {
                 userId: true,
                 userName: true,
-                profileImage: true,
-                birthDate: true,
-                gender: true,
               },
             },
           },
@@ -1318,9 +1317,7 @@ app.get("/api/getPendingRequests", async (req, res) => {
     console.log("pending requests", pendingRequests);
     const formattedPendingRequests = pendingRequests.map((request) => {
       return {
-        buddyRequestId: request.buddyRequestId,
         post: request.post,
-        creator: request.post.creator,
         requester: request.requester,
         requestStatus: request.requestStatus,
       };
