@@ -24,6 +24,8 @@ model User {
   profileImage String? // Add this field to store the profile image as binary data
 
   travelPosts   TravelPost[]   @relation("UserTravelPosts")
+  buddyTravelPosts  TravelPost[]    @relation("BuddyTravelPosts")
+
   buddyRequests BuddyRequest[] @relation("UserBuddyRequests")
   hikingPosts   HikingPost[]
   comments      Comment[]
@@ -41,8 +43,10 @@ model TravelPost {
   destination     String
   buddyPreference Json[]   @db.Json
   additionalInfo  String?
-  buddyId         String? // Add this field to store the buddy's userId
-  buddyFound      Boolean  @default(false) // Indicate whether a buddy has been found
+
+  buddy            User?  @relation("BuddyTravelPosts", fields: [buddyId], references: [userId])
+  buddyId           String?
+   buddyFound      Boolean  @default(false) // Indicate whether a buddy has been found
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -61,6 +65,12 @@ model BuddyRequest {
   postId         String
   createdAt      DateTime   @default(now())
   requestStatus  String     @default("Pending")
+}
+
+model TravelDestination {
+  destinationId        String          @unique
+  state                String
+  city                 String
 }
 
 model HikingPost {

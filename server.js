@@ -1302,6 +1302,8 @@ app.get("/api/getPendingRequests", async (req, res) => {
               select: {
                 userId: true,
                 userName: true,
+                profileImage: true,
+                birthDate: true,
               },
             },
           },
@@ -1317,6 +1319,7 @@ app.get("/api/getPendingRequests", async (req, res) => {
     console.log("pending requests", pendingRequests);
     const formattedPendingRequests = pendingRequests.map((request) => {
       return {
+        buddyRequestId: request.buddyRequestId,
         post: request.post,
         requester: request.requester,
         requestStatus: request.requestStatus,
@@ -1331,6 +1334,36 @@ app.get("/api/getPendingRequests", async (req, res) => {
       .json({ error: "An error occurred while getting pending requests" });
   }
 });
+
+// /api/deleteBuddyRequest/
+app.delete("/api/deleteBuddyRequest/:buddyRequestId", async (req, res) => {
+  try {
+    const { buddyRequestId } = req.params;
+
+    // Additional validation can be placed here.
+    if (!buddyRequestId) {
+      return res
+        .status(400)
+        .json({ error: "Invalid or missing buddyRequestId parameter" });
+    }
+
+    // Delete the BuddyRequest
+    await prisma.buddyRequest.delete({
+      where: {
+        buddyRequestId: buddyRequestId,
+      },
+    });
+
+    console.log(`Deleted Buddy Request ${buddyRequestId}`);
+    res.status(200).json({ status: 'success', requestId: buddyRequestId });
+  } catch (error) {
+    console.error("Error deleting Buddy Request:", error);
+    res
+      .status(500)
+      .json({ error: `An error occurred while deleting the Buddy Request with ID: ${buddyRequestId}` });
+  }
+});
+
 
 app.post("/api/acceptBuddyRequest", async (req, res) => {
   const { userId, postId } = req.body;
@@ -1442,6 +1475,8 @@ app.get("/api/getBuddyFoundPosts", async (req, res) => {
       .json({ error: "An error occurred while getting buddy found posts" });
   }
 });
+
+
 
 // ---------------------------Useless-----------------------------------------
 
@@ -1562,6 +1597,124 @@ app.put("/api/acceptBuddyRequest/:postId/:requesterId", async (req, res) => {
   }
 });
 
+// /api/unpair/${buddy.travelPostId
+app.put("/api/unpair/:postId", async (req, res) => {
+  const { postId } = req.params;
+
+  try {
+    const updatedTravelPost = await prisma.TravelPost.update({
+      where: {
+        travelPostId: postId,
+      },
+      data: {
+        buddyFound: false,
+        buddyId: null,
+      },
+    });
+
+    console.log("Travel Post status updated:", updatedTravelPost);
+
+    res
+      .status(200)
+      .json({ message: "Travel Post status updated successfully" });
+  } catch (error) {
+    console.error("Error updating Travel Post status:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating Travel Post status" });
+  }
+});
+
+// Delete the record from the buddyRequest
+// await axios.delete(`/api/unpairBuddyRequest`, {
+//   postId: buddy.travelPostId,
+//   requesterId: userId,
+// });
+app.delete("/api/unpairBuddyRequest", async (req, res) => {
+  const { postId, requesterId } = req.body;
+
+  try {
+    // Find the record first
+    const buddyRequest = await prisma.BuddyRequest.findFirst({
+      where: {
+        postId: postId,
+        requesterId: requesterId
+      }
+    });
+
+    // If a record is found, delete it
+    if (buddyRequest && buddyRequest.buddyRequestId) {
+      await prisma.BuddyRequest.delete({
+        where: {
+          buddyRequestId: buddyRequest.buddyRequestId
+        }
+      });
+      console.log("Buddy Request deleted");
+      res.status(200).json({ message: "Buddy Request deleted successfully" });
+    } else {
+      res.status(404).json({ error: "Buddy Request not found" });
+    }
+
+  } catch (error) {
+    console.error("Error deleting Buddy Request:", error);
+    res.status(500).json({ error: "An error occurred while deleting Buddy Request" });
+  }
+
+}
+);
+
+
+// /api/updateTravelBuddyPost/${props.postId}
+app.put("/api/updateTravelBuddyPost/:postId", async (req, res) => {
+  const { postId } = req.params;
+  const {
+    startDate,
+    endDate,
+    buddyPreference,
+    additionalInfo,
+  } = req.body;
+
+  // Console log
+  console.log("startDate", startDate);
+  console.log("endDate", endDate);
+  console.log("buddyPreference", buddyPreference);
+  console.log("additionalInfo", additionalInfo);
+
+
+  try {
+    // Convert startDate and endDate to Date objects
+    const formattedStartDate = new Date(startDate);
+    const formattedEndDate = new Date(endDate);
+
+    // Parse the buddyPreference JSON string back to an array
+    const parsedBuddyPreference = JSON.parse(buddyPreference);
+
+    // Update the TravelPost in the database
+    const updatedTravelPost = await prisma.TravelPost.update({
+      where: {
+        travelPostId: postId,
+      },
+      data: {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        buddyPreference: {
+          set: parsedBuddyPreference,
+        },
+        additionalInfo,
+      },
+    });
+
+    console.log("Travel Post updated:", updatedTravelPost);
+
+    res.status(200).json({ message: "Travel Post updated successfully" });
+  } catch (error) {
+    console.error("Error updating Travel Post:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating Travel Post" });
+  }
+});
+
 // Get the requester user
 app.get("/api/getUserPosts/:userID", async (req, res) => {
   try {
@@ -1599,6 +1752,7 @@ app.get("/api/getTravelBuddyRequest", async (req, res) => {
       select: {
         postId: true,
         requesterId: true,
+        requestStatus: true,
       },
     });
 
