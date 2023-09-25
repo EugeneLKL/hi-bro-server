@@ -84,25 +84,25 @@ model HikingPost {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   reports     Report[]
-  user        User?     @relation(fields: [userId], references: [userId])
+  user        User?     @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Comment {
   commentId  String     @id @default(uuid())
-  user       User?      @relation(fields: [userId], references: [userId])
+  user       User?      @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId     String?
   postId     String
   comment    String
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
-  hikingPost HikingPost @relation(fields: [postId], references: [postId])
+  hikingPost HikingPost @relation(fields: [postId], references: [postId], onDelete: Cascade)
 }
 
 model Report {
   reportId      String      @id @default(uuid())
-  user          User?       @relation(fields: [userId], references: [userId])
+  user          User?       @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId        String?
-  hikingPost    HikingPost? @relation(fields: [postId], references: [postId])
+  hikingPost    HikingPost? @relation(fields: [postId], references: [postId], onDelete: Cascade)
   postId        String?
   reportTitle   String
   reportContent String
@@ -123,7 +123,7 @@ model Trail {
   amenities         String[]
   trailImagesUrl    String[]
   userId            String?
-  user              User?         @relation(fields: [userId], references: [userId])
+  user              User?         @relation(fields: [userId], references: [userId], onDelete: Cascade)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   reviews           Review[]
@@ -133,9 +133,9 @@ model Trail {
 
 model Review {
   reviewId      String   @id @default(uuid())
-  trail         Trail?   @relation(fields: [trailId], references: [trailId])
+  trail         Trail?   @relation(fields: [trailId], references: [trailId], onDelete: Cascade)
   trailId       String?
-  user          User?    @relation(fields: [userId], references: [userId])
+  user          User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
   userId        String?
   reviewTitle   String
   reviewContent String
@@ -145,10 +145,10 @@ model Review {
 
 model TrailRating {
   trailRatingId String   @id @default(uuid())
-  trail         Trail?   @relation(fields: [trailId], references: [trailId])
+  trail         Trail?   @relation(fields: [trailId], references: [trailId], onDelete: Cascade)
   trailId       String?
   userId        String?
-  user          User?    @relation(fields: [userId], references: [userId])
+  user          User?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
   rating        Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -157,7 +157,7 @@ model TrailRating {
 model SavedTrails {
   savedTrailsId String   @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [userId])
+  user          User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
   trail         Trail?   @relation(fields: [trailId], references: [trailId], onDelete: Cascade)
   trailId       String?
   createdAt     DateTime @default(now())
